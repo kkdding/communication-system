@@ -3,24 +3,70 @@ package main
 import (
 	"fmt"
 	"net"
+	"sync"
 )
 
 type Server struct {
 	Ip   string
 	Port int
+
+	// 在线用户列表
+	OnlineMap map[string]*User
+	mapLock   sync.RWMutex
+
+	// 消息广播的channel
+	Message chan string
 }
 
 // NewServer 创建一个 server 的接口
 func NewServer(ip string, port int) *Server {
 	server := &Server{
-		Ip:   ip,
-		Port: port,
+		Ip:        ip,
+		Port:      port,
+		OnlineMap: make(map[string]*User),
+		Message:   make(chan string),
 	}
 	return server
 }
 
+// ListenMessage 监听Message广播消息，发给全部到在线User
+func (s *Server) ListenMessage() {
+	for {
+		msg := <-s.Message
+		s.mapLock.Lock()
+		for _, user := range s.OnlineMap {
+			user.C <- msg
+		}
+		s.mapLock.Unlock()
+	}
+}
+
+// BroadCast 广播消息
+func (s *Server) BroadCast(user *User, msg string) {
+	sendMsg := "[" + user.Name + "] " + msg
+	s.Message <- sendMsg
+}
+
 func (s *Server) Handler(conn net.Conn) {
+	// 链接建立成功
 	fmt.Printf("Connect Success!!! Connected Address: %s\n", conn.LocalAddr().String())
+
+	// 用户上线，将用户加入到OnlineMap中
+	user := NewUser(conn)
+
+	s.mapLock.Lock()
+
+	s.OnlineMap[user.Name] = user
+	fmt.Println("当前用户列表:")
+	for userName, userInfo := range s.OnlineMap {
+		fmt.Printf("userName: %s, userInfo: %v\n", userName, *userInfo)
+	}
+
+	s.mapLock.Unlock()
+
+	// 广播当前用户上线消息
+	s.BroadCast(user, "已上线")
+
 }
 
 // Start 启动 server 的接口
@@ -40,6 +86,9 @@ func (s *Server) Start() {
 			return
 		}
 	}(listener)
+
+	// 启动监听Message
+	go s.ListenMessage()
 
 	for {
 		// accept
