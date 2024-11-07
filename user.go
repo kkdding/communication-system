@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"strings"
 )
 
 type User struct {
@@ -82,6 +83,20 @@ func (u *User) DoMessage(msg string) {
 	} else if msg == SELF {
 		userInfo := "Info:" + "[" + u.Addr + "]" + u.Name + "\n"
 		u.C <- userInfo
+	} else if len(msg) > 7 && msg[:7] == "rename|" {
+		newName := strings.Split(msg, "|")[1]
+		_, ok := u.server.OnlineMap[newName]
+		if ok {
+			u.C <- "当前用户名已被使用\n"
+		} else {
+			u.server.mapLock.Lock()
+			delete(u.server.OnlineMap, u.Name)
+			u.server.OnlineMap[newName] = u
+			u.server.mapLock.Unlock()
+
+			u.Name = newName
+			u.C <- "更新用户名为:" + u.Name + "\n"
+		}
 	} else {
 		u.server.BroadCast(u, msg)
 	}
