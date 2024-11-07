@@ -72,7 +72,19 @@ func (u *User) Offline() {
 
 // DoMessage 用户处理消息业务
 func (u *User) DoMessage(msg string) {
-	u.server.BroadCast(u, msg)
+	if msg == WHO {
+		u.server.mapLock.Lock()
+		for _, user := range u.server.OnlineMap {
+			onlineUser := "[" + user.Addr + "]" + user.Name + ":" + "在线...\n"
+			u.C <- onlineUser
+		}
+		u.server.mapLock.Unlock()
+	} else if msg == SELF {
+		userInfo := "Info:" + "[" + u.Addr + "]" + u.Name + "\n"
+		u.C <- userInfo
+	} else {
+		u.server.BroadCast(u, msg)
+	}
 }
 
 // ListenMessage 监听User中channel的方法，一旦有消息就发送给客户端
