@@ -52,21 +52,8 @@ func (s *Server) Handler(conn net.Conn) {
 	// 链接建立成功
 	fmt.Printf("Connect Success!!! Connected Address: %s\n", conn.LocalAddr().String())
 
-	// 用户上线，将用户加入到OnlineMap中
-	user := NewUser(conn)
-
-	s.mapLock.Lock()
-
-	s.OnlineMap[user.Name] = user
-	fmt.Println("当前用户列表:")
-	for userName, userInfo := range s.OnlineMap {
-		fmt.Printf("userName: %s, userInfo: %v\n", userName, *userInfo)
-	}
-
-	s.mapLock.Unlock()
-
-	// 广播当前用户上线消息
-	s.BroadCast(user, "已上线")
+	user := NewUser(conn, s)
+	user.Online()
 
 	// 接受客户端发送的消息
 	go func() {
@@ -75,7 +62,7 @@ func (s *Server) Handler(conn net.Conn) {
 			n, err := conn.Read(buf)
 
 			if n == 0 {
-				s.BroadCast(user, "下线")
+				user.Offline()
 				return
 			}
 
@@ -87,8 +74,8 @@ func (s *Server) Handler(conn net.Conn) {
 			// 提取用户的消息(去除'\n')
 			msg := string(buf[:n-1])
 
-			// 广播消息
-			s.BroadCast(user, msg)
+			// 用户针对msg进行消息处理
+			user.DoMessage(msg)
 		}
 	}()
 
