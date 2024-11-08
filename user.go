@@ -73,14 +73,14 @@ func (u *User) Offline() {
 
 // DoMessage 用户处理消息业务
 func (u *User) DoMessage(msg string) {
-	if msg == WHO {
+	if msg == OP_WHO {
 		u.server.mapLock.Lock()
 		for _, user := range u.server.OnlineMap {
 			onlineUser := "[" + user.Addr + "]" + user.Name + ":" + "在线...\n"
 			u.C <- onlineUser
 		}
 		u.server.mapLock.Unlock()
-	} else if msg == SELF {
+	} else if msg == OP_SELF {
 		userInfo := "Info:" + "[" + u.Addr + "]" + u.Name + "\n"
 		u.C <- userInfo
 	} else if len(msg) > 7 && msg[:7] == "rename|" {

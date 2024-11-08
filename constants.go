@@ -1,6 +1,6 @@
 package main
 
 const (
-	WHO  string = "who"
-	SELF string = "self"
+	OP_WHO  string = "who"
+	OP_SELF string = "self"
 )
