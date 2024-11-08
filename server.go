@@ -92,11 +92,11 @@ func (s *Server) Handler(conn net.Conn) {
 			// 当前用户活跃，重制定时器
 			// 激活select
 
-		case <-time.After(time.Second * 10):
+		case <-time.After(TimeOut):
 			// 用户无操作超时
 			// 强制关闭当前User
 			user.C <- "长时间未操作，强制下线"
-			time.Sleep(time.Second * 2)
+			time.Sleep(TimeDelay)
 			close(user.C)
 			err := conn.Close()
 			if err != nil {

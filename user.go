@@ -73,17 +73,17 @@ func (u *User) Offline() {
 
 // DoMessage 用户处理消息业务
 func (u *User) DoMessage(msg string) {
-	if msg == OP_WHO {
+	if msg == OpWho {
 		u.server.mapLock.Lock()
 		for _, user := range u.server.OnlineMap {
 			onlineUser := "[" + user.Addr + "]" + user.Name + ":" + "在线...\n"
 			u.C <- onlineUser
 		}
 		u.server.mapLock.Unlock()
-	} else if msg == OP_SELF {
+	} else if msg == OpSelf {
 		userInfo := "Info:" + "[" + u.Addr + "]" + u.Name + "\n"
 		u.C <- userInfo
-	} else if len(msg) > 7 && msg[:7] == "rename|" {
+	} else if len(msg) > 7 && msg[:7] == OpRename {
 		newName := strings.Split(msg, "|")[1]
 		_, ok := u.server.OnlineMap[newName]
 		if ok {
@@ -97,6 +97,29 @@ func (u *User) DoMessage(msg string) {
 			u.Name = newName
 			u.C <- "更新用户名为:" + u.Name + "\n"
 		}
+	} else if len(msg) > 4 && msg[:3] == OpTo {
+		// 获取对方用户名
+		remoteName := strings.Split(msg, "|")[1]
+		if remoteName == "" {
+			u.C <- "消息格式不正确"
+			return
+		}
+
+		// 根据用户名找到User对象
+		remoteUser, ok := u.server.OnlineMap[remoteName]
+		if !ok {
+			u.C <- "用户名不存在"
+			return
+		}
+
+		// 获取消息内容
+		messageContent := strings.Split(msg, "|")[2]
+		if messageContent == "" {
+			u.C <- "消息内容为空，请重新发送\n"
+			return
+		}
+		remoteUser.C <- u.Name + "发来消息: " + messageContent
+
 	} else {
 		u.server.BroadCast(u, msg)
 	}
